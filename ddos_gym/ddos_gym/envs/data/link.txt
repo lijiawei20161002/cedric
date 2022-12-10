@@ -1,0 +1,13 @@
+GB, US
+CY, US
+US, AU
+US, JP
+DE, JP
+BR, CA
+JP, CA
+CA, RU
+RU, CN
+JP, CN
+BR, RU
+AU, BR
+US, CA
