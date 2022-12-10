@@ -7,13 +7,16 @@ import random
 
 init_balance = 0
 samples = 5
+account_limit = 2
 
 class DDoS(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, size=5):
+    def __init__(self, render_mode=None, mode='cedric', size=5):
         self.ddos = []
         self.time = 0
+        self.mode = mode
+        self.account_limit = account_limit
         self.graph = Defense()
         with open("ddos_gym/ddos_gym/envs/data/attack.csv", 'r') as f:
             csvreader = csv.reader(f) # delimiter='\t')
@@ -29,15 +32,14 @@ class DDoS(gym.Env):
                     dst.append(self.graph.country_dict[d.split("\'")[1].split("\'")[0]])
                 bandwidth = float(row[3])
                 self.ddos.append((src, dst, bandwidth))
-        #print('self.ddos: ', self.ddos)
         self.account = {}
         for agent in self.graph.agents:
             self.account[agent] = init_balance
 
         # We have 2 actions, corresponding to "join", "stay out"
         self.action_space = spaces.Discrete(2)
-        self.account = [spaces.Discrete(10)] * (len(self.graph.agents))
-        self.observation_space = spaces.Tuple([spaces.Discrete(10)]+(self.account))
+        self.account = [spaces.Discrete(self.account_limit)] * (len(self.graph.agents))
+        self.observation_space = spaces.Tuple([spaces.Discrete(self.account_limit)]+(self.account))
 
     def reset(self, seed=None, options=None):
         self.ddos = []
@@ -57,16 +59,13 @@ class DDoS(gym.Env):
                     dst.append(self.graph.country_dict[d.split("\'")[1].split("\'")[0]])
                 bandwidth = float(row[3])
                 self.ddos.append((src, dst, bandwidth))
-        #print('self.ddos: ', self.ddos)
         for agent in self.graph.agents:
             self.account[agent] = init_balance
         return self.account
 
-    def step(self, action_n):
-        #print(self.time)
+    def step(self, invest_n, action_n):
         reward_n = {}
         event = self.ddos[self.time]
-        #self.time = self.time + 1
         coalition = set()
         for agent in self.graph.agents:
             if action_n[agent] == 1:
@@ -80,6 +79,7 @@ class DDoS(gym.Env):
             iso.add(agent)
             payoff = 0
             credit = 0
+            self.state_n[len(self.state_n)-1] = self.invest_n[dst]
             success, gain = Defense(src, dst, coalition, bandwidth).social_gain()
             if dst == agent:
                 if success:
@@ -93,20 +93,24 @@ class DDoS(gym.Env):
                     subset = set(subset)
                 else:
                     subset = coalition-iso
-                #print(src, dst, subset, agent)
                 success1, g1 = Defense(src, dst, subset, bandwidth).social_gain()
                 subset.add(agent)
                 success2, g2 = Defense(src, dst, subset, bandwidth).social_gain()
                 if dst==agent:
-                    credit -= self.graph.cost[agent]
+                    credit -= invest_n[agent]
                 if action_n[agent] == 1:
                     if g2 > 0:
-                        credit += (g2-g1)/g2*self.graph.cost[dst]
-            #print('gain: ', g1, g2, credit)
-            #payoff += credit/samples
+                        credit += (g2-g1)/g2*invest_n[dst]
+            # cedric mode
+            if self.mode == 'cedric':
+                payoff += credit/samples
             reward_n[agent] = payoff
-            self.account[agent] = int(self.account[agent] + payoff)
-            #self.account[agent] = int(self.account[agent] + credit/samples)
+            # no credit mode
+            if self.mode == 'no credit':
+                self.account[agent] = int(self.account[agent] + payoff)
+            # cedric mode
+            if self.mode == 'cedric':
+                self.account[agent] = int(self.account[agent] + credit/samples)
         return self.account, reward_n
 
     def render(self):

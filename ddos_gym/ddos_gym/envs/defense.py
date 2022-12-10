@@ -1,7 +1,9 @@
 import numpy as np
 import csv
-app_value = 10
-cost_value = 2
+# app_value = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+app_value = [10] * 10
+# cost_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+cost_value = [2] * 10
 
 class Defense:
     def __init__(self, src='US', dst='JP', coalition=['US', 'JP'], bandwidth=1):
@@ -12,6 +14,7 @@ class Defense:
         self.app = {}
         self.cost = {}
         with open('ddos_gym/ddos_gym/envs/data/link.txt', 'r') as f:
+            cur = 0
             for line in f:
                 a = line.split(',')[0].strip()
                 b = line.split(',')[1].split('\n')[0].strip()
@@ -19,15 +22,21 @@ class Defense:
                     if a not in self.country_dict:
                         self.country_dict[a] = len(self.country_dict)
                         self.dict_country[self.country_dict[a]] = a
-                    a = self.country_dict[a]
-                    self.app[a] = app_value
-                    self.cost[a] = cost_value
+                        a = self.country_dict[a]
+                        self.app[a] = app_value[cur]
+                        self.cost[a] = cost_value[cur]
+                        cur += 1
+                    else:
+                        a = self.country_dict[a]
                     if b not in self.country_dict:
                         self.country_dict[b] = len(self.country_dict)
                         self.dict_country[self.country_dict[b]] = b
-                    b = self.country_dict[b]
-                    self.app[b] = app_value
-                    self.cost[b] = cost_value
+                        b = self.country_dict[b]
+                        self.app[b] = app_value[cur]
+                        self.cost[b] = cost_value[cur]
+                        cur += 1
+                    else:
+                        b = self.country_dict[b]
                     self.links.add(frozenset([a, b]))
                     self.agents.add(a)
                     self.agents.add(b)
