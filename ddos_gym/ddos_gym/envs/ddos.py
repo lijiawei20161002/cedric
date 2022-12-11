@@ -79,7 +79,7 @@ class DDoS(gym.Env):
             iso.add(agent)
             payoff = 0
             credit = 0
-            self.state_n[len(self.state_n)-1] = self.invest_n[dst]
+            self.account[len(self.account)-1] = invest_n[dst]
             success, gain = Defense(src, dst, coalition, bandwidth).social_gain()
             if dst == agent:
                 if success:
