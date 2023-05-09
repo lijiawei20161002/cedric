@@ -15,11 +15,11 @@ max_epsilon = 1
 min_epsilon = 0.01
 decay = 0.01
 
-train_episodes = 2000
+train_episodes = 100
 #test_episodes = 100
 max_rounds = 30
-account_limit = 2
-mode = 'cedric'  # mode can be 'cedric', 'no credit'
+account_limit = 5
+mode = 'counterfactual'  # mode can be 'cedric', 'no credit', 'counterfactual', 'shared'
 
 base = env.observation_space.spaces[0].n # observation space of each agent, should equal to account_limit
 
@@ -31,7 +31,7 @@ def tuple_to_num(state_n):
         num = base**len(env.observation_space.spaces) - 1
     if num < 0:
         num = 0
-    return num
+    return int(num)
 
 Q = {}
 QC = {}
@@ -68,12 +68,14 @@ for episode in range(train_episodes):
                     invest_n[agent] = 0
             else:
                 action_n[agent] = env.action_space.sample()
+                #print(agent, graph.agents, state_n)
                 if state_n[agent] > 0:
                     invest_n[agent] = random.randint(0, state_n[agent])
                 else:
                     invest_n[agent] = 0
             new_state_n, reward_n = env.step(invest_n, action_n)
-            Q[agent][tuple_to_num(state_n), action_n[agent]] = Q[agent][tuple_to_num(state_n), action_n[agent]] + alpha*(reward_n[agent]+discount_factor*np.max(Q[agent][tuple_to_num(new_state_n), :])-Q[agent][state_n[agent], action_n[agent]])
+            #print(tuple_to_num(state_n), action_n[agent])
+            Q[agent][tuple_to_num(state_n), action_n[agent]] = Q[agent][tuple_to_num(state_n), action_n[agent]] + alpha*(reward_n[agent]+discount_factor*np.max(Q[agent][tuple_to_num(new_state_n), :])-Q[agent][int(state_n[agent]), action_n[agent]])
             total_training_rewards[agent] += reward_n[agent]
             state_n[agent] = new_state_n[agent]
 
@@ -83,11 +85,14 @@ for episode in range(train_episodes):
     states.append(state_n)
     actions.append(action_n)
     rewards.append(total_training_rewards)
-    
 
+df = pd.DataFrame(rewards)
+df.to_csv('output/rewards_'+mode+'.csv', index=False)
+
+'''
 df1 = pd.DataFrame(states)
 df2 = pd.DataFrame(actions)
 df3 = pd.DataFrame(rewards)
 df1.to_csv('output/states.csv', index=False)
 df2.to_csv('output/actions.csv', index=False)
-df3.to_csv('output/rewards.csv', index=False)
+df3.to_csv('output/rewards.csv', index=False)'''

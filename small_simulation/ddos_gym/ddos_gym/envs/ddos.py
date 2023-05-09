@@ -7,7 +7,7 @@ import random
 
 init_balance = 0
 samples = 5
-account_limit = 2
+account_limit = 5
 
 class DDoS(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
@@ -71,46 +71,53 @@ class DDoS(gym.Env):
             if action_n[agent] == 1:
                 coalition.add(agent)
             reward_n[agent] = 0
+        src = event[0]
+        dst = event[1][0]
+        bandwidth = event[2]
+        success, gain = Defense(src, dst, coalition, bandwidth).social_gain()
         for agent in coalition:
-            src = event[0]
-            dst = event[1][0]
-            bandwidth = event[2]
-            iso = set()
-            iso.add(agent)
             payoff = 0
             credit = 0
             self.account[len(self.account)-1] = invest_n[dst]
-            success, gain = Defense(src, dst, coalition, bandwidth).social_gain()
             if dst == agent:
                 if success:
                     payoff += self.graph.app[agent]
             if action_n[agent] == 1:
                 payoff -= self.graph.cost[agent]
             payoff += gain
-            for k in range(samples):
-                if len(coalition-iso)>0:
-                    subset = random.sample(coalition-iso, random.randint(1, len(coalition)-1))
-                    subset = set(subset)
-                else:
-                    subset = coalition-iso
-                success1, g1 = Defense(src, dst, subset, bandwidth).social_gain()
-                subset.add(agent)
-                success2, g2 = Defense(src, dst, subset, bandwidth).social_gain()
-                if dst==agent:
-                    credit -= invest_n[agent]
-                if action_n[agent] == 1:
-                    if g2 > 0:
-                        credit += (g2-g1)/g2*invest_n[dst]
             # cedric mode
             if self.mode == 'cedric':
+                iso = set()
+                iso.add(agent)
+                for k in range(samples):
+                    if len(coalition-iso)>0:
+                        subset = random.sample(coalition-iso, random.randint(1, len(coalition)-1))
+                        subset = set(subset)
+                    else:
+                        subset = coalition-iso
+                    success1, g1 = Defense(src, dst, subset, bandwidth).social_gain()
+                    subset.add(agent)
+                    success2, g2 = Defense(src, dst, subset, bandwidth).social_gain()
+                    if dst==agent:
+                        credit -= invest_n[agent]
+                    if action_n[agent] == 1:
+                        if g2 > 0:
+                            credit += (g2-g1)/g2*invest_n[dst]
                 payoff += credit/samples
-            reward_n[agent] = payoff
+                self.account[agent] = int(self.account[agent] + credit/samples)
+            # counterfactual mode
+            if self.mode == 'counterfactual':
+                success1, g1 = Defense(src, dst, coalition, bandwidth).social_gain()
+                success2, g2 = Defense(src, dst, coalition-agent, bandwidth).social_gain()
+                self.account[agent] = int(self.account[agent] + (g2-g1))
             # no credit mode
             if self.mode == 'no credit':
                 self.account[agent] = int(self.account[agent] + payoff)
-            # cedric mode
-            if self.mode == 'cedric':
-                self.account[agent] = int(self.account[agent] + credit/samples)
+            reward_n[agent] = payoff
+        # shared mode
+        if self.mode == 'shared':
+            for agent in coalition:
+                self.account[agent] = int(self.account[agent] + gain/len(coalition))
         return self.account, reward_n
 
     def render(self):
