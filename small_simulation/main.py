@@ -4,9 +4,7 @@ import numpy as np
 import random
 from ddos_gym.envs.defense import Defense
 import pandas as pd
-
-env = gym.make('ddos-v0', )
-graph = Defense()
+import os
 
 alpha = 0.7
 discount_factor = 0.618
@@ -19,9 +17,12 @@ train_episodes = 100
 #test_episodes = 100
 max_rounds = 30
 account_limit = 5
-mode = 'counterfactual'  # mode can be 'cedric', 'no credit', 'counterfactual', 'shared'
+mode = 'shared'  # mode can be 'cedric', 'no credit', 'counterfactual', 'shared'
 
-base = env.observation_space.spaces[0].n # observation space of each agent, should equal to account_limit
+env = gym.make('ddos-v0', mode=mode)
+graph = Defense()
+
+base = account_limit
 
 def tuple_to_num(state_n):
     num = 0
@@ -81,18 +82,14 @@ for episode in range(train_episodes):
 
             epsilon = min_epsilon+(max_epsilon-min_epsilon)*np.exp(-decay*episode)
         env.time += 1
-    print(episode)
+    print('episode: ', episode)
     states.append(state_n)
     actions.append(action_n)
     rewards.append(total_training_rewards)
 
-df = pd.DataFrame(rewards)
-df.to_csv('output/rewards_'+mode+'.csv', index=False)
-
-'''
-df1 = pd.DataFrame(states)
-df2 = pd.DataFrame(actions)
+#df1 = pd.DataFrame(states)
+#df2 = pd.DataFrame(actions)
 df3 = pd.DataFrame(rewards)
-df1.to_csv('output/states.csv', index=False)
-df2.to_csv('output/actions.csv', index=False)
-df3.to_csv('output/rewards.csv', index=False)'''
+#df1.to_csv('output/states_'+mode+'.csv', index=False)
+#df2.to_csv('output/actions_'+mode+'.csv', index=False)
+df3.to_csv('output/rewards_'+mode+'.csv', index=False)

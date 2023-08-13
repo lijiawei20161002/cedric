@@ -20,7 +20,8 @@ with open("dns.txt") as f:
     dns2country = {}
     content = f.readlines()
     for l in content:
-        dns2country[l.split()[0]] = l.split(",")[1].split()[0]
+        l = l.strip()
+        dns2country[l.split()[0]] = l[-2:]
 
 for link in links:
     if link[0] in dns2country and link[1] in dns2country:
@@ -39,3 +40,7 @@ with open("attack.csv", "w") as output_file:
     dict_writer = csv.DictWriter(output_file, keys)
     dict_writer.writeheader()
     dict_writer.writerows(data['biggest']['attacks'])
+
+print('number of countries: ', len(set(dns2country.values())))
+print('number of AS links: ', len(links))
+print('number of cross-country links: ', len(country_links))

@@ -8,6 +8,7 @@ import random
 init_balance = 0
 samples = 5
 account_limit = 5
+max_agent_num = 10
 
 class DDoS(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
@@ -39,7 +40,7 @@ class DDoS(gym.Env):
         # We have 2 actions, corresponding to "join", "stay out"
         self.action_space = spaces.Discrete(2)
         self.account = [spaces.Discrete(self.account_limit)] * (len(self.graph.agents))
-        self.observation_space = spaces.Tuple([spaces.Discrete(self.account_limit)]+(self.account))
+        self.observation_space = spaces.Tuple([spaces.Discrete(max_agent_num)]+(self.account))
 
     def reset(self, seed=None, options=None):
         self.ddos = []
@@ -98,6 +99,7 @@ class DDoS(gym.Env):
                     success1, g1 = Defense(src, dst, subset, bandwidth).social_gain()
                     subset.add(agent)
                     success2, g2 = Defense(src, dst, subset, bandwidth).social_gain()
+                    subset.remove(agent)
                     if dst==agent:
                         credit -= invest_n[agent]
                     if action_n[agent] == 1:
@@ -108,7 +110,8 @@ class DDoS(gym.Env):
             # counterfactual mode
             if self.mode == 'counterfactual':
                 success1, g1 = Defense(src, dst, coalition, bandwidth).social_gain()
-                success2, g2 = Defense(src, dst, coalition-agent, bandwidth).social_gain()
+                success2, g2 = Defense(src, dst, coalition.remove(agent), bandwidth).social_gain()
+                coalition.add(agent)
                 self.account[agent] = int(self.account[agent] + (g2-g1))
             # no credit mode
             if self.mode == 'no credit':

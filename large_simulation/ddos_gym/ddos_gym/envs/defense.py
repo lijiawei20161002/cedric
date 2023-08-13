@@ -14,7 +14,6 @@ class Defense:
         self.app = {}
         self.cost = {}
         with open('ddos_gym/ddos_gym/envs/data/link.txt', 'r') as f:
-            cur = 0
             for line in f:
                 a = line.split(',')[0].strip()
                 b = line.split(',')[1].split('\n')[0].strip()
@@ -23,18 +22,16 @@ class Defense:
                         self.country_dict[a] = len(self.country_dict)
                         self.dict_country[self.country_dict[a]] = a
                         a = self.country_dict[a]
-                        self.app[a] = app_value[cur]
-                        self.cost[a] = cost_value[cur]
-                        cur += 1
+                        self.app[a] = app_value[a]
+                        self.cost[a] = cost_value[a]
                     else:
                         a = self.country_dict[a]
                     if b not in self.country_dict:
                         self.country_dict[b] = len(self.country_dict)
                         self.dict_country[self.country_dict[b]] = b
                         b = self.country_dict[b]
-                        self.app[b] = app_value[cur]
-                        self.cost[b] = cost_value[cur]
-                        cur += 1
+                        self.app[b] = app_value[b]
+                        self.cost[b] = cost_value[b]
                     else:
                         b = self.country_dict[b]
                     self.links.add(frozenset([a, b]))
