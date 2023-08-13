@@ -7,7 +7,7 @@ import random
 
 init_balance = 0
 samples = 5
-account_limit = 1
+account_limit = 2
 
 class DDoS(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
@@ -17,6 +17,7 @@ class DDoS(gym.Env):
         self.time = 0
         self.mode = mode
         self.account_limit = account_limit
+        self.account = {}
         self.compression = 100
         self.graph = Defense()
         with open("ddos_gym/ddos_gym/envs/data/attack.csv", 'r') as f:
@@ -44,8 +45,7 @@ class DDoS(gym.Env):
 
         # We have 2 actions, corresponding to "join", "stay out"
         self.action_space = spaces.Discrete(2)
-        self.account = [spaces.Discrete(self.account_limit)] * (len(self.graph.agents)+1)
-        self.observation_space = spaces.Tuple([spaces.Discrete(self.account_limit)]+(self.account))
+        self.observation_space = [spaces.Discrete(self.account_limit)] * (len(self.graph.agents))
         for agent in self.graph.agents:
             self.account[agent] = init_balance
 
@@ -75,6 +75,7 @@ class DDoS(gym.Env):
                 self.ddos.append((src, dst, bandwidth))
         for agent in self.graph.agents:
             self.account[agent] = init_balance
+        self.account = [round(x) for x in self.account]
         return self.account
 
     def step(self, invest_n, action_n):
@@ -134,6 +135,7 @@ class DDoS(gym.Env):
         if self.mode == 'shared':
             for agent in coalition:
                 self.account[agent] = int(self.account[agent] + gain/len(coalition)) // self.compression
+        self.account = [round(x) for x in self.account]
         return self.account, reward_n
 
     def render(self):

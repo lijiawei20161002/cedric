@@ -15,7 +15,7 @@ decay = 0.01
 train_episodes = 2
 #test_episodes = 100
 max_rounds = 30
-account_limit = 1
+account_limit = 2
 mode = 'cedric'  # mode can be 'cedric', 'no credit'
 env = gym.make('ddos-v0', mode=mode)
 graph = Defense()
@@ -47,9 +47,9 @@ Q = {}
 QC = {}
 for agent in graph.agents: 
     Q[agent] = {}
-    generate_states(Q[agent], str(base) * len(env.observation_space.spaces), base)
+    generate_states(Q[agent], str(base) * len(env.observation_space), base)
     QC[agent] = {}
-    generate_states(QC[agent], str(base) * len(env.observation_space.spaces), base)
+    generate_states(QC[agent], str(base) * len(env.observation_space), base)
 
 states = []
 actions = []
@@ -86,8 +86,6 @@ for episode in range(train_episodes):
                 else:
                     invest_n[agent] = 0
             new_state_n, reward_n = env.step(invest_n, action_n)
-            new_state_n = [round(x) for x in new_state_n]
-            print(new_state_n, reward_n)
             Q[agent][str(state_n)][action_n[agent]] = Q[agent][str(state_n)][action_n[agent]] + alpha*(reward_n[agent]+discount_factor*np.max(Q[agent][str(new_state_n)])-Q[agent][str(state_n)][action_n[agent]])
             total_training_rewards[agent] += reward_n[agent]
             state_n[agent] = new_state_n[agent]
