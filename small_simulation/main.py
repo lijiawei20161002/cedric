@@ -16,8 +16,8 @@ decay = 0.01
 train_episodes = 100
 #test_episodes = 100
 max_rounds = 30
-account_limit = 5
-mode = 'shared'  # mode can be 'cedric', 'no credit', 'counterfactual', 'shared'
+account_limit = 2
+mode = 'cedric'  # mode can be 'cedric', 'no credit', 'counterfactual', 'shared'
 
 env = gym.make('ddos-v0', mode=mode)
 graph = Defense()

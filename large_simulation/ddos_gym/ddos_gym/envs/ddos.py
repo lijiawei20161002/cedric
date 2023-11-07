@@ -5,9 +5,10 @@ import csv
 from ddos_gym.envs.defense import Defense
 import random
 
-init_balance = 0
+init_balance = 5
 samples = 5
-account_limit = 2
+account_limit = 4
+max_agent_num = 10
 
 class DDoS(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
@@ -17,8 +18,6 @@ class DDoS(gym.Env):
         self.time = 0
         self.mode = mode
         self.account_limit = account_limit
-        self.account = {}
-        self.compression = 100
         self.graph = Defense()
         with open("ddos_gym/ddos_gym/envs/data/attack.csv", 'r') as f:
             csvreader = csv.reader(f) # delimiter='\t')
@@ -28,26 +27,20 @@ class DDoS(gym.Env):
                 src = []
                 rawsrc = row[4].split('[')[1].split(']')[0].split(",")
                 for c in rawsrc:
-                    if len(c) > 0:
-                        cc = c.split("\'")[1].split("\'")[0]
-                        if cc in self.graph.country_dict:
-                            src.append(self.graph.country_dict[cc])
+                    src.append(self.graph.country_dict[c.split("\'")[1].split("\'")[0]])
                 rawdst = row[1].split('[')[1].split(']')[0].split(",")
                 for d in rawdst:
-                    if len(d) > 0:
-                        cc = d.split("\'")[1].split("\'")[0]
-                        if cc in self.graph.country_dict:
-                            dst.append(self.graph.country_dict[cc])
+                    dst.append(self.graph.country_dict[d.split("\'")[1].split("\'")[0]])
                 bandwidth = float(row[3])
-                if len(src) == 0 or len(dst)==0:
-                    continue
                 self.ddos.append((src, dst, bandwidth))
+        self.account = {}
+        for agent in self.graph.agents:
+            self.account[agent] = init_balance
 
         # We have 2 actions, corresponding to "join", "stay out"
         self.action_space = spaces.Discrete(2)
-        self.observation_space = [spaces.Discrete(self.account_limit)] * (len(self.graph.agents))
-        for agent in self.graph.agents:
-            self.account[agent] = init_balance
+        self.account = [spaces.Discrete(self.account_limit)] * (len(self.graph.agents))
+        self.observation_space = spaces.Tuple([spaces.Discrete(max_agent_num)]+(self.account))
 
     def reset(self, seed=None, options=None):
         self.ddos = []
@@ -61,21 +54,14 @@ class DDoS(gym.Env):
                 src = []
                 rawsrc = row[4].split('[')[1].split(']')[0].split(",")
                 for c in rawsrc:
-                    if len(c) > 0:
-                        cc = c.split("\'")[1].split("\'")[0]
-                        if cc in self.graph.country_dict:
-                            src.append(self.graph.country_dict[cc])
+                    src.append(self.graph.country_dict[c.split("\'")[1].split("\'")[0]])
                 rawdst = row[1].split('[')[1].split(']')[0].split(",")
                 for d in rawdst:
-                    if len(d) > 0:
-                        cc = d.split("\'")[1].split("\'")[0]
-                        if cc in self.graph.country_dict:
-                            dst.append(self.graph.country_dict[cc])
+                    dst.append(self.graph.country_dict[d.split("\'")[1].split("\'")[0]])
                 bandwidth = float(row[3])
                 self.ddos.append((src, dst, bandwidth))
         for agent in self.graph.agents:
             self.account[agent] = init_balance
-        self.account = [round(x) for x in self.account]
         return self.account
 
     def step(self, invest_n, action_n):
@@ -120,22 +106,21 @@ class DDoS(gym.Env):
                         if g2 > 0:
                             credit += (g2-g1)/g2*invest_n[dst]
                 payoff += credit/samples
-                self.account[agent] = int(self.account[agent] + credit/samples) // self.compression
+                self.account[agent] = int(self.account[agent] + credit/samples)
             # counterfactual mode
             if self.mode == 'counterfactual':
                 success1, g1 = Defense(src, dst, coalition, bandwidth).social_gain()
                 success2, g2 = Defense(src, dst, coalition.remove(agent), bandwidth).social_gain()
                 coalition.add(agent)
-                self.account[agent] = int(self.account[agent] + (g2-g1)) // self.compression
+                self.account[agent] = int(self.account[agent] + (g2-g1))
             # no credit mode
             if self.mode == 'no credit':
-                self.account[agent] = int(self.account[agent] + payoff) // self.compression
+                self.account[agent] = int(self.account[agent] + payoff)
             reward_n[agent] = payoff
         # shared mode
         if self.mode == 'shared':
             for agent in coalition:
-                self.account[agent] = int(self.account[agent] + gain/len(coalition)) // self.compression
-        self.account = [round(x) for x in self.account]
+                self.account[agent] = int(self.account[agent] + gain/len(coalition))
         return self.account, reward_n
 
     def render(self):

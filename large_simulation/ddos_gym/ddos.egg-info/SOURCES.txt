@@ -8,4 +8,3 @@ ddos_gym/__init__.py
 ddos_gym/envs/__init__.py
 ddos_gym/envs/ddos.py
 ddos_gym/envs/defense.py
-ddos_gym/envs/data/pre_process.py
