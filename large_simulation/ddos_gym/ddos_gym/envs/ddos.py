@@ -5,7 +5,7 @@ import csv
 from ddos_gym.envs.defense import Defense
 import random
 
-init_balance = 5
+init_balance = 4
 samples = 5
 account_limit = 4
 max_agent_num = 10

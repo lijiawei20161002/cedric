@@ -12,10 +12,11 @@ epsilon = 1
 max_epsilon = 1
 min_epsilon = 0.01
 decay = 0.01
-train_episodes = 1000
+train_episodes = 1500
 max_rounds = 10
 account_limit = 4
 mode = 'cedric'
+
 '''
 # Environment setup
 env = gym.make('ddos-v0', mode=mode)
@@ -117,6 +118,50 @@ for episode in range(train_episodes):
         new_state_n, reward_n = env.step(invest_n, action_n)
     rewards.append(total_training_rewards)
 
+    cheatback = False
+    for step in range(max_rounds):
+        current_event = env.ddos[env.time]
+        victim_agent = current_event[1][0]
+        for agent in graph.agents:
+            # Implement Detective strategy
+            # Copycat for cheat back, Always Cheat to exploit
+            if action_n[victim_agent] == 0:
+                cheatback = True
+            if cheatback:
+                action_n[agent] = action_n[victim_agent]
+            else:
+                action_n[agent] = 0
+            if state_n[agent] > 0:
+                invest_n[agent] = state_n[agent] #random.randint(0, state_n[agent])
+            else:
+                invest_n[agent] = 0
+        # Take action and observe reward and next state
+        new_state_n, reward_n = env.step(invest_n, action_n)
+    rewards.append(total_training_rewards)
+
+    cheat = False
+    for step in range(max_rounds):
+        current_event = env.ddos[env.time]
+        victim_agent = current_event[1][0]
+        for agent in graph.agents:
+            # Implement Detective strategy
+            # Copycat for cheat back, Always Cheat to exploit
+            if action_n[victim_agent] == 0:
+                cheat = True
+            if cheat:
+                action_n[agent] = 0
+            else:
+                action_n[agent] = 1
+            if state_n[agent] > 0:
+                invest_n[agent] = state_n[agent] #random.randint(0, state_n[agent])
+            else:
+                invest_n[agent] = 0
+        # Take action and observe reward and next state
+        new_state_n, reward_n = env.step(invest_n, action_n)
+    rewards.append(total_training_rewards)
+
+
+
 # After training, save rewards to CSV
 df_rewards = pd.DataFrame(rewards)
 df_rewards.to_csv('output/strategy.csv', index=False)'''
@@ -125,7 +170,9 @@ df_rewards = pd.read_csv('output/strategy.csv')
 strategy_rewards = {
     'q_learning': df_rewards.iloc[0:train_episodes].reset_index(drop=True).mean(axis=1),
     'tit_for_tat': df_rewards.iloc[train_episodes:2*train_episodes].reset_index(drop=True).mean(axis=1),
-    'accumulate_credits': df_rewards.iloc[2*train_episodes:].reset_index(drop=True).mean(axis=1)
+    'accumulate_credits': df_rewards.iloc[2*train_episodes:3*train_episodes].reset_index(drop=True).mean(axis=1),
+    'detective': df_rewards.iloc[3*train_episodes:4*train_episodes].reset_index(drop=True).mean(axis=1),
+    'grudger': df_rewards.iloc[4*train_episodes:].reset_index(drop=True).mean(axis=1)
 }
 
 # Convert the strategy rewards to a DataFrame for rolling mean 
@@ -133,7 +180,7 @@ df_strategy_rewards = pd.DataFrame(strategy_rewards)
 df_strategy_rewards.to_csv('output/strategy_rewards.csv', index=False)
 
 # Calculate the rolling mean for smoothing the plot
-df_rolling_strategy_rewards = df_strategy_rewards.rolling(window=20).mean()
+df_rolling_strategy_rewards = df_strategy_rewards.rolling(window=100).mean()
 
 plt.figure(figsize=(8, 6))
 
@@ -141,6 +188,8 @@ plt.figure(figsize=(8, 6))
 plt.plot(df_rolling_strategy_rewards['q_learning'], label='Q-Learning')
 plt.plot(df_rolling_strategy_rewards['tit_for_tat'], label='Tit-for-Tat')
 plt.plot(df_rolling_strategy_rewards['accumulate_credits'], label='Accumulate Credits')
+plt.plot(df_rolling_strategy_rewards['detective'], label='Detective')
+plt.plot(df_rolling_strategy_rewards['grudger'], label='Grudger')
 
 plt.title('Average Rewards per Strategy Group per Episode', fontsize=14)
 plt.xlabel('Episodes', fontsize=14)
