@@ -1,4 +1,4 @@
-# cedric_small_simulation
+# cedric_large_simulation
 
 ## Installation
 cd ddos_gym
