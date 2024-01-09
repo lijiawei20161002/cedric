@@ -1,95 +1,115 @@
-import gym
-import matplotlib.pyplot as plt
-import numpy as np
-import random
 from ddos_gym.envs.defense import Defense
-import pandas as pd
-import os
+import gym
+import numpy as np
+import tensorflow as tf
+from collections import deque
+import random
 
-alpha = 0.7
-discount_factor = 0.618
-epsilon = 1
-max_epsilon = 1
-min_epsilon = 0.01
-decay = 0.01
+# Define the DQN Model
+class DQNModel(tf.keras.Model):
+    def __init__(self, output_size):
+        super(DQNModel, self).__init__()
+        self.dense1 = tf.keras.layers.Dense(24, activation='relu')
+        self.dense2 = tf.keras.layers.Dense(24, activation='relu')
+        self.dense3 = tf.keras.layers.Dense(output_size, activation='linear')
 
-train_episodes = 100
-#test_episodes = 100
-max_rounds = 30
-account_limit = 2
-mode = 'cedric'  # mode can be 'cedric', 'no credit', 'counterfactual', 'shared'
+    def call(self, inputs):
+        x = self.dense1(inputs)
+        x = self.dense2(x)
+        return self.dense3(x)
 
-env = gym.make('ddos-v0', mode=mode)
-graph = Defense()
+# Define the DQN Agent
+class DQNAgent:
+    def __init__(self, state_size, action_size, invest_size):
+        self.state_size = state_size
+        self.num_agents = state_size
+        self.action_size = action_size
+        self.invest_size = invest_size
+        self.memory = deque(maxlen=2000)
+        self.gamma = 0.95
+        self.epsilon = 1.0
+        self.epsilon_min = 0.01
+        self.epsilon_decay = 0.995
+        self.model_action = DQNModel(action_size)
+        self.model_invest = DQNModel(invest_size)
+        self.model_action.compile(loss='mse', optimizer=tf.keras.optimizers.Adam())
+        self.model_invest.compile(loss='mse', optimizer=tf.keras.optimizers.Adam())
 
-base = account_limit
+    def remember(self, state, invest_n, action_n, reward, next_state, done):
+        self.memory.append((state, invest_n, action_n, reward, next_state, done))
 
-def tuple_to_num(state_n):
-    num = 0
-    for i in range(len(state_n)):
-        num = num*base + state_n[i]
-    if num >= base**len(env.observation_space.spaces):
-        num = base**len(env.observation_space.spaces) - 1
-    if num < 0:
-        num = 0
-    return int(num)
+    def act(self, state):
+        action_n = {}
+        invest_n = {}
 
-Q = {}
-QC = {}
-for agent in graph.agents:
-    Q[agent] = np.zeros((base**len(env.observation_space.spaces), env.action_space.n))
-    QC[agent] = np.zeros((base**len(env.observation_space.spaces), account_limit))
-
-states = []
-actions = []
-rewards = []
-
-# the credits upper bound in an agent's account
-env.account_limit = account_limit
-
-for episode in range(train_episodes):
-    state_n = env.reset()
-    action_n = {}
-    invest_n = np.zeros(len(graph.agents))
-    total_training_rewards = {}
-    for agent in graph.agents:
-        total_training_rewards[agent] = 0
-        action_n[agent] = 1
-
-    for step in range(max_rounds):
-        #agents = random.sample(graph.agents, 3)
-        for agent in graph.agents:
-            exp_exp_tradeoff = random.uniform(0,1)
-
-            if exp_exp_tradeoff > epsilon:
-                action_n[agent] = np.argmax(Q[agent][tuple_to_num(state_n),:])
-                if state_n[agent] > 0:
-                    invest_n[agent] = np.argmax(QC[agent][tuple_to_num(state_n),:])
-                else:
-                    invest_n[agent] = 0
+        for agent_id in range(self.num_agents):
+            if np.random.rand() <= self.epsilon:
+                action_n[agent_id] = random.randrange(self.action_size)
+                invest_n[agent_id] = random.randrange(self.invest_size)
             else:
-                action_n[agent] = env.action_space.sample()
-                #print(agent, graph.agents, state_n)
-                if state_n[agent] > 0:
-                    invest_n[agent] = random.randint(0, state_n[agent])
-                else:
-                    invest_n[agent] = 0
-            new_state_n, reward_n = env.step(invest_n, action_n)
-            #print(tuple_to_num(state_n), action_n[agent])
-            Q[agent][tuple_to_num(state_n), action_n[agent]] = Q[agent][tuple_to_num(state_n), action_n[agent]] + alpha*(reward_n[agent]+discount_factor*np.max(Q[agent][tuple_to_num(new_state_n), :])-Q[agent][int(state_n[agent]), action_n[agent]])
-            total_training_rewards[agent] += reward_n[agent]
-            state_n[agent] = new_state_n[agent]
+                # Predict invest_n for each agent
+                invest_values = self.model_invest.predict(state)
+                invest_n[agent_id] = np.argmax(invest_values[0])
 
-            epsilon = min_epsilon+(max_epsilon-min_epsilon)*np.exp(-decay*episode)
-        env.time += 1
-    print('episode: ', episode)
-    states.append(state_n)
-    actions.append(action_n)
-    rewards.append(total_training_rewards)
+                # Predict action_n for each agent
+                action_values = self.model_action.predict(state)
+                action_n[agent_id] = np.argmax(action_values[0])
 
-#df1 = pd.DataFrame(states)
-#df2 = pd.DataFrame(actions)
-df3 = pd.DataFrame(rewards)
-#df1.to_csv('output/states_'+mode+'.csv', index=False)
-#df2.to_csv('output/actions_'+mode+'.csv', index=False)
-df3.to_csv('output/rewards_'+mode+'.csv', index=False)
+        return invest_n, action_n
+    
+    def replay(self, batch_size):
+        if len(self.memory) < batch_size:
+            return
+        minibatch = random.sample(self.memory, batch_size)
+        for state, invest_n, action_n, reward, next_state, done in minibatch:
+            # Update for action model
+            target_action = reward
+            if not done:
+                target_action = reward + self.gamma * np.amax(self.model_action.predict(next_state)[0])
+            target_f_action = self.model_action.predict(state)
+            target_f_action[0][action_n] = target_action
+
+            # Update for invest model
+            target_invest = reward
+            if not done:
+                target_invest = reward + self.gamma * np.amax(self.model_invest.predict(next_state)[0])
+            target_f_invest = self.model_invest.predict(state)
+            target_f_invest[0][invest_n] = target_invest
+
+            # Fit both models
+            self.model_action.fit(state, target_f_action, epochs=1, verbose=0)
+            self.model_invest.fit(state, target_f_invest, epochs=1, verbose=0)
+
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+
+# Initialize the DDoS gym environment
+env = gym.make('ddos-v0')
+state_size = len(env.account)  # Adjust based on your environment
+action_size = env.action_space.n
+invest_size = env.account_limit + 1  # Including 0 to account_limit
+agent = DQNAgent(state_size, action_size, invest_size)
+batch_size = 32
+
+# Training loop
+train_episodes = 100
+max_steps_per_episode = 500
+for e in range(train_episodes):
+    state = env.reset()
+    state = np.reshape(state, [1, state_size])
+
+    for step in range(max_steps_per_episode):
+        invest_n, action_n = agent.act(state)
+        next_state, reward, done, _ = env.step(invest_n, action_n)
+        next_state = np.reshape(next_state, [1, state_size])
+
+        agent.remember(state, invest_n, action_n, reward, next_state, done)
+        state = next_state
+
+        if done:
+            print(f"Episode: {e+1}/{train_episodes}, Score: {step}, Epsilon: {agent.epsilon:.2f}")
+            break
+
+        if len(agent.memory) > batch_size:
+            agent.replay(batch_size)
+

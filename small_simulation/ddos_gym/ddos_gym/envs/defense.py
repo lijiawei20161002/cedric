@@ -1,9 +1,8 @@
 import numpy as np
 import csv
-app_value = [6, 7, 6, 7, 6, 5, 5, 5, 6, 7]
-# app_value = [10] * 10
-#cost_value = [4, 4, 5, 4, 5, 5, 5, 5, 5, 4]
-cost_value = [2] * 10
+#app_value = [6, 7, 6, 7, 6, 5, 5, 5, 6, 7]
+app_value = [10] * 10
+cost_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 class Defense:
     def __init__(self, src='US', dst='JP', coalition=['US', 'JP'], bandwidth=1):

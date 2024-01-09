@@ -1,9 +1,5 @@
 import numpy as np
 import csv
-app_value = [6, 7, 6, 7, 6, 5, 5, 5, 6, 7]
-# app_value = [10] * 10
-#cost_value = [4, 4, 5, 4, 5, 5, 5, 5, 5, 4]
-cost_value = [2] * 10
 
 class Defense:
     def __init__(self, src='US', dst='JP', coalition=['US', 'JP'], bandwidth=1):
@@ -22,16 +18,16 @@ class Defense:
                         self.country_dict[a] = len(self.country_dict)
                         self.dict_country[self.country_dict[a]] = a
                         a = self.country_dict[a]
-                        self.app[a] = app_value[a]
-                        self.cost[a] = cost_value[a]
+                        self.app[a] = 10 #app_value[a]
+                        self.cost[a] = 2 #cost_value[a]
                     else:
                         a = self.country_dict[a]
                     if b not in self.country_dict:
                         self.country_dict[b] = len(self.country_dict)
                         self.dict_country[self.country_dict[b]] = b
                         b = self.country_dict[b]
-                        self.app[b] = app_value[b]
-                        self.cost[b] = cost_value[b]
+                        self.app[b] = 10 #app_value[b]
+                        self.cost[b] = 2 #cost_value[b]
                     else:
                         b = self.country_dict[b]
                     self.links.add(frozenset([a, b]))

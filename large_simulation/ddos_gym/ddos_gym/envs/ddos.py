@@ -8,7 +8,7 @@ import random
 init_balance = 4
 samples = 5
 account_limit = 4
-max_agent_num = 10
+max_agent_num = 200
 
 class DDoS(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
@@ -18,6 +18,7 @@ class DDoS(gym.Env):
         self.time = 0
         self.mode = mode
         self.account_limit = account_limit
+        self.max_agent_num = max_agent_num
         self.graph = Defense()
         with open("ddos_gym/ddos_gym/envs/data/attack.csv", 'r') as f:
             csvreader = csv.reader(f) # delimiter='\t')
@@ -27,10 +28,12 @@ class DDoS(gym.Env):
                 src = []
                 rawsrc = row[4].split('[')[1].split(']')[0].split(",")
                 for c in rawsrc:
-                    src.append(self.graph.country_dict[c.split("\'")[1].split("\'")[0]])
+                    if len(c)>=2 and (c.split("\'")[1].split("\'")[0] in self.graph.country_dict):
+                        src.append(self.graph.country_dict[c.split("\'")[1].split("\'")[0]])
                 rawdst = row[1].split('[')[1].split(']')[0].split(",")
                 for d in rawdst:
-                    dst.append(self.graph.country_dict[d.split("\'")[1].split("\'")[0]])
+                    if len(d)>=2 and (d.split("\'")[1].split("\'")[0] in self.graph.country_dict):
+                        dst.append(self.graph.country_dict[d.split("\'")[1].split("\'")[0]])
                 bandwidth = float(row[3])
                 self.ddos.append((src, dst, bandwidth))
         self.account = {}
@@ -54,10 +57,12 @@ class DDoS(gym.Env):
                 src = []
                 rawsrc = row[4].split('[')[1].split(']')[0].split(",")
                 for c in rawsrc:
-                    src.append(self.graph.country_dict[c.split("\'")[1].split("\'")[0]])
+                    if len(c)>=2 and (c.split("\'")[1].split("\'")[0] in self.graph.country_dict):
+                        src.append(self.graph.country_dict[c.split("\'")[1].split("\'")[0]])
                 rawdst = row[1].split('[')[1].split(']')[0].split(",")
                 for d in rawdst:
-                    dst.append(self.graph.country_dict[d.split("\'")[1].split("\'")[0]])
+                    if len(d)>=2 and (d.split("\'")[1].split("\'")[0] in self.graph.country_dict):
+                        dst.append(self.graph.country_dict[d.split("\'")[1].split("\'")[0]])
                 bandwidth = float(row[3])
                 self.ddos.append((src, dst, bandwidth))
         for agent in self.graph.agents:
