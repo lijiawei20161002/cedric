@@ -1,8 +1,5 @@
 # cedric_simulation
 
-## Data
-/data/
-
 ## Installation
 cd ddos_gym
 
