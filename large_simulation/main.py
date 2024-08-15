@@ -98,11 +98,14 @@ train_episodes = 100
 max_steps_per_episode = 500
 for e in range(train_episodes):
     state = env.reset()
+    if len(state) != state_size:
+        print(f"Warning: State size mismatch. Expected {state_size}, got {len(state)}.")
     state = np.reshape(state, [1, state_size])
 
     for step in range(max_steps_per_episode):
         invest_n, action_n = agent.act(state)
         next_state, reward = env.step(invest_n, action_n)
+        print(next_state)
         next_state = np.reshape(next_state, [1, state_size])
 
         agent.remember(state, invest_n, action_n, reward, next_state)
