@@ -17,7 +17,6 @@ max_rounds = 10
 account_limit = 4
 mode = 'cedric'
 
-'''
 # Environment setup
 env = gym.make('ddos-v0', mode=mode)
 graph = Defense()
@@ -164,7 +163,7 @@ for episode in range(train_episodes):
 
 # After training, save rewards to CSV
 df_rewards = pd.DataFrame(rewards)
-df_rewards.to_csv('output/strategy.csv', index=False)'''
+df_rewards.to_csv('output/strategy.csv', index=False)
 df_rewards = pd.read_csv('output/strategy.csv')
 
 strategy_rewards = {

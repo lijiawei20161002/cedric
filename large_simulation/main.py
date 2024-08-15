@@ -37,7 +37,7 @@ class DQNAgent:
         self.model_action.compile(loss='mse', optimizer=tf.keras.optimizers.Adam())
         self.model_invest.compile(loss='mse', optimizer=tf.keras.optimizers.Adam())
 
-    def remember(self, state, invest_n, action_n, reward, next_state, done):
+    def remember(self, state, invest_n, action_n, reward, next_state, done=False):
         self.memory.append((state, invest_n, action_n, reward, next_state, done))
 
     def act(self, state):
@@ -102,15 +102,11 @@ for e in range(train_episodes):
 
     for step in range(max_steps_per_episode):
         invest_n, action_n = agent.act(state)
-        next_state, reward, done, _ = env.step(invest_n, action_n)
+        next_state, reward = env.step(invest_n, action_n)
         next_state = np.reshape(next_state, [1, state_size])
 
-        agent.remember(state, invest_n, action_n, reward, next_state, done)
+        agent.remember(state, invest_n, action_n, reward, next_state)
         state = next_state
-
-        if done:
-            print(f"Episode: {e+1}/{train_episodes}, Score: {step}, Epsilon: {agent.epsilon:.2f}")
-            break
 
         if len(agent.memory) > batch_size:
             agent.replay(batch_size)
