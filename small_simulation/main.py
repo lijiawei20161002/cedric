@@ -12,6 +12,7 @@ epsilon = 1
 max_epsilon = 1
 min_epsilon = 0.01
 decay = 0.01
+random.seed(42)
 
 train_episodes = 100
 #test_episodes = 100

@@ -5,6 +5,8 @@ import tensorflow as tf
 from collections import deque
 import random
 
+random.seed(42)
+
 # Define the DQN Model
 class DQNModel(tf.keras.Model):
     def __init__(self, output_size):
